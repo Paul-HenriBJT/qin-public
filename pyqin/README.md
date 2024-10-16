@@ -1,74 +1,157 @@
-# WebSocket Client Package
+# ws_audio_client
 
-A Python client package to interact seamlessly with the custom WebSocket server.
+A Python client package to interact seamlessly with a websocket audio processing server. This package handles authentication, configuration, audio streaming, and receiving processed audio data, making it easy to integrate with the server's API.
 
 ## Features
 
-- **Authentication**: Authenticate with the server using API keys.
-- **Configuration**: Set and update session parameters like language, voice, and speed.
-- **Audio Handling**: Send audio data and receive transcriptions and audio responses.
-- **Callbacks**: Handle events via asynchronous callbacks.
+- **Easy Authentication**: Simplify the process of connecting and authenticating with the server.
+- **Dynamic Configuration**: Update session parameters like language, voice ID, and speed on the fly.
+- **Audio Streaming**: Stream audio from various sources (microphone, URL, or file) to the server.
+- **Receive Processed Audio**: Receive and handle processed audio data from the server with customizable callbacks.
+- **Asynchronous Design**: Built using `asyncio` for efficient IO-bound operations.
 
 ## Installation
 
 ```bash
-pip install websocket_client_package
+pip install pyqin
 ```
 
-## Usage 
+Alternatively, clone the repository and install locally:
 
+```bash
+git clone https://github.com/Paul-HenriBJT/qin-public.git
+cd pyquin
+pip install .
+```
+
+## Requirements
+
+- Python 3.6 or higher
+- See [requirements.txt](https://github.com/Paul-HenriBJT/qin-public/blob/main/requirements.txt) for package dependencies.
+
+## Usage
+
+### Basic Example
+
+```python
 import asyncio
-from pyqin import WebSocketClient, AuthenticationError, ConfigurationError
+from ws_audio_client.client import WebsocketAudioClient
+from ws_audio_client.audio_streams import microphone_audio_stream
+import pyaudio
+import numpy as np
 
-async def on_auth_success():
-    print("Authenticated successfully!")
+def play_audio(audio_chunk):
+    # Set up PyAudio
+    p = pyaudio.PyAudio()
+    stream = p.open(format=pyaudio.paFloat32,
+                    channels=1,
+                    rate=44100,
+                    output=True)
 
-async def on_auth_failure(reason):
-    print(f"Authentication failed: {reason}")
+    # Convert bytes to numpy array
+    audio_data = np.frombuffer(audio_chunk, dtype=np.float32)
 
-async def on_config_success():
-    print("Configuration set successfully!")
+    # Play audio
+    stream.write(audio_data.tobytes())
 
-async def on_config_failure(reason):
-    print(f"Configuration failed: {reason}")
-
-async def on_audio_received(audio_bytes):
-    with open("received_audio.raw", "wb") as f:
-        f.write(audio_bytes)
-    print("Received audio data")
-
-async def on_transcription_received(transcription):
-    print(f"Received transcription: {transcription}")
+    # Close stream
+    stream.stop_stream()
+    stream.close()
+    p.terminate()
 
 async def main():
-    client = WebSocketClient(
-        url="ws://localhost:8000/ws",
-        api_key="YOUR_API_KEY",
-        on_auth_success=on_auth_success,
-        on_auth_failure=on_auth_failure,
-        on_config_success=on_config_success,
-        on_config_failure=on_config_failure,
-        on_audio_received=on_audio_received,
-        on_transcription_received=on_transcription_received,
+    API_KEY = "YOUR_API_KEY"
+    WS_URL = "ws://localhost:8000/ws"
+
+    client = WebsocketAudioClient(
+        api_key=API_KEY,
+        ws_url=WS_URL,
+        language="en-US",
+        voice_id="your_voice_id",
+        speed="normal",
+        on_audio_received=play_audio
     )
 
-    async with client:
-        # Set initial configuration
-        await client.set_params(
-            language="zh",
-            voice_id="e3827ec5-697a-4b7c-9704-1a23041bbc51",
-            speed="normal",
-            context="General context here"
-        )
+    await client.connect()
 
-        # Send audio data
-        with open("audio_sample.raw", "rb") as f:
-            audio_bytes = f.read()
-        timestamp = asyncio.get_event_loop().time()
-        await client.send_audio(audio_bytes, timestamp)
+    # Stream audio from the microphone
+    audio_generator = microphone_audio_stream()
 
-        # Keep the client running to listen for messages
-        await asyncio.sleep(10)
+    # Start streaming audio
+    await client.stream_audio(audio_generator)
 
 if __name__ == "__main__":
     asyncio.run(main())
+```
+
+## Examples
+
+Additional examples are available in the [/examples](https://github.com/Paul-HenriBJT/qin-public/tree/main/examples) directory:
+
+- Stream Audio from Microphone
+- Stream Audio from URL
+- Stream Audio from Audio File
+
+## API Reference
+
+### WebsocketAudioClient
+
+#### Initialization
+
+```python
+client = WebsocketAudioClient(
+    api_key: str,
+    ws_url: str = "ws://localhost:8000/ws",
+    language: str = "en-US",
+    voice_id: str = "default_voice_id",
+    speed: str = "normal",
+    on_audio_received: Optional[Callable[[bytes], None]] = None,
+)
+```
+
+- `api_key`: Your API key for authentication.
+- `ws_url`: WebSocket server URL.
+- `language`: Language code for the session.
+- `voice_id`: Voice ID for text-to-speech.
+- `speed`: Speed of the speech ("slowest", "slow", "normal", "fast", "fastest").
+- `on_audio_received`: Callback function to handle received audio data.
+
+#### Methods
+
+- `await connect()`: Establishes a connection and authenticates with the server.
+- `await stream_audio(audio_generator: AsyncGenerator[bytes, None])`: Streams audio data to the server.
+- `await update_configuration(**kwargs)`: Updates session parameters dynamically.
+- `await close()`: Closes the connection and cleans up resources.
+
+### Audio Stream Utilities
+
+- `microphone_audio_stream(chunk_size=1024, sample_rate=44100, channels=1)`: Captures audio from the microphone.
+- `file_audio_stream(file_path, chunk_size=1024)`: Reads audio data from a file.
+- `url_audio_stream(url, chunk_size=1024)`: Streams audio data from a URL.
+
+## Error Handling
+
+Custom exceptions are defined in `ws_audio_client.exceptions`:
+
+- `WebsocketAudioClientError`: Base exception class.
+- `AuthenticationError`: Raised when authentication fails.
+- `ConfigurationError`: Raised when configuration fails.
+- `StreamingError`: Raised when streaming encounters an error.
+
+## Logging
+
+Logging is implemented using Python's built-in logging module. You can configure logging as needed in your application:
+
+```python
+import logging
+
+logging.basicConfig(level=logging.INFO)
+```
+
+## Contributing
+
+Contributions are welcome! Please open an issue or submit a pull request on GitHub.
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](https://github.com/Paul-HenriBJT/qin-public/blob/main/LICENSE) file for details.

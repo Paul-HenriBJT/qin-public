@@ -1,0 +1,13 @@
+README.md
+pyproject.toml
+pyqin.egg-info/PKG-INFO
+pyqin.egg-info/SOURCES.txt
+pyqin.egg-info/dependency_links.txt
+pyqin.egg-info/requires.txt
+pyqin.egg-info/top_level.txt
+websocket_client/__init__.py
+websocket_client/audio_streams.py
+websocket_client/client.py
+websocket_client/exceptions.py
+websocket_client/models.py
+websocket_client/utils.py
