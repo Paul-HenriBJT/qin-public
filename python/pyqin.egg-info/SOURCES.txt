@@ -1,0 +1,13 @@
+README.md
+pyproject.toml
+pyqin/__init__.py
+pyqin/audio_streams.py
+pyqin/client.py
+pyqin/exceptions.py
+pyqin/models.py
+pyqin/utils.py
+pyqin.egg-info/PKG-INFO
+pyqin.egg-info/SOURCES.txt
+pyqin.egg-info/dependency_links.txt
+pyqin.egg-info/requires.txt
+pyqin.egg-info/top_level.txt
